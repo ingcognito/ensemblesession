@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>ENSEMBLE</title>
+	<meta name="description" content="ENSEMBLE EST. 2015" />
+	<meta name="keywords" content="ensemble, ensemblecanada, worldwide, toronto, bboy " />
+	<meta name="author" content="Codrops" />
+	<link rel="shortcut icon" href="img/favicon.ico">
+	<link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,700" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="css/normalize.css" />
+	<link rel="stylesheet" type="text/css" href="css/demo.css" />
+	<link rel="stylesheet" type="text/css" href="css/revealer.css" />
+	<script>document.documentElement.className = 'js';</script>
+</head>
+<body class="demo-1 loading">
+	<canvas id="webgl"></canvas>
+	<svg class="hidden">
+		<symbol id="icon-arrow" viewBox="0 0 24 24">
+			<title>arrow</title>
+			<polygon points="6.3,12.8 20.9,12.8 20.9,11.2 6.3,11.2 10.2,7.2 9,6 3.1,12 9,18 10.2,16.8 " />
+		</symbol>
+		<symbol id="icon-drop" viewBox="0 0 24 24">
+			<title>drop</title>
+			<path d="M12,21c-3.6,0-6.6-3-6.6-6.6C5.4,11,10.8,4,11.4,3.2C11.6,3.1,11.8,3,12,3s0.4,0.1,0.6,0.3c0.6,0.8,6.1,7.8,6.1,11.2C18.6,18.1,15.6,21,12,21zM12,4.8c-1.8,2.4-5.2,7.4-5.2,9.6c0,2.9,2.3,5.2,5.2,5.2s5.2-2.3,5.2-5.2C17.2,12.2,13.8,7.3,12,4.8z" />
+			<path d="M12,18.2c-0.4,0-0.7-0.3-0.7-0.7s0.3-0.7,0.7-0.7c1.3,0,2.4-1.1,2.4-2.4c0-0.4,0.3-0.7,0.7-0.7c0.4,0,0.7,0.3,0.7,0.7C15.8,16.5,14.1,18.2,12,18.2z" />
+		</symbol>
+	</svg>
+	<main>
+		<a href="http://www.ensemblecanada.com/">
+		<header class="content content--header">
+			<div id="rev-1" style="position:fixed; opacity: 0.7;" >
+				<img src="img/logo.png" width="200"></div>
+		</header>
+		<section class="content content--main">
+				
+		</section>
+		<section class="content--related">
+				<center>
+					<br><br><br><br><br><br><br><br>
+					<img src="img/logo.png" width="200">
+					<br><br><br><br>
+					<h6>enter the void</h6>
+				</center>
+		</section>
+	</a>
+	</main>
+	<script src="js/regl.min.js"></script>
+	<script type="x-shader/x-fragment" id="fragmentShader">
+	#define TWO_PI 6.2831853072
+	#define PI 3.14159265359
+
+	precision highp float;
+
+	uniform float globaltime;
+	uniform vec2 resolution;
+	uniform float aspect;
+	uniform float scroll;
+	uniform float velocity;
+
+	const float timescale = 0.15;
+	const float displace = 0.03;
+	const float gridSize = 20.0;
+	const int layers = 3;
+	const float detail = 2.0;
+	const float wave = 1.0;
+
+	vec2 rotate(vec2 v, float angle) {
+		float c = cos(angle);
+		float s = sin(angle);
+		return v * mat2(c, -s, s, c);
+	}
+
+	vec3 coordToHex(vec2 coord, float scale, float angle) {
+		vec2 c = rotate(coord, angle);
+		float q = (1.0 / 3.0 * sqrt(3.0) * c.x - 1.0 / 3.0 * c.y) * scale;
+		float r = 2.0 / 3.0 * c.y * scale;
+		return vec3(q, r, -q - r);
+	}
+
+	vec3 hexToCell(vec3 hex, float m) {
+		return fract(hex / m) * 2.0 - 1.0;
+	}
+
+	float absMax(vec3 v) {
+		return max(max(abs(v.x), abs(v.y)), abs(v.z));
+	}
+
+	float nsin(float value) {
+		return sin(value * TWO_PI) * 0.5 + 0.5;
+	}
+
+	float hexToFloat(vec3 hex, float amt) {
+		return mix(absMax(hex), 1.0 - length(hex) / sqrt(3.0), amt);
+	}
+
+	float calc(vec3 hex, float time, float len) {
+		float value = 0.0;
+
+		for (int i = 0; i < layers; i++) {
+			vec3 cell = hexToCell(hex, 1.0 + float(i));
+			value += nsin(
+				hexToFloat(
+					cell,
+					nsin(len * wave + time + float(i) / float(layers))
+				) * detail + nsin(time * 0.5)
+			);
+		}
+
+		return value / float(layers);
+	}
+
+	void main(void) {
+		vec2 tx = (gl_FragCoord.xy / resolution.xy - 0.5) * vec2(aspect, 1.0) * 2.0;
+		float time = globaltime * timescale - scroll;
+		float invScroll = 1.0 - scroll;
+		float rgb[3];
+		float len = 1.0 - length(tx) * 0.3;
+		float zoom = nsin(time * 0.1) + len * velocity * 3.0;
+		float angle = TWO_PI * nsin(time * 0.05) + PI * len * scroll;
+		vec3 hex = coordToHex(tx, gridSize * zoom, angle);
+
+		for (int i = 0; i < 3; i++) {
+			float time2 = time + float(i) * displace * invScroll;
+			rgb[i] = pow(calc(hex, time2, len), 3.0) * (0.2 + 0.8 * sin(PI * len * 0.5));
+		}
+
+		gl_FragColor = vec4(
+			rgb[0] * (1.0 - scroll * 0.2),
+			rgb[1] * invScroll,
+			(rgb[2] + 0.2) * invScroll,
+			1.0
+		);
+	}
+	</script>
+	<script src="js/demo1.js"></script>
+
+	<script src="js/anime.min.js"></script>
+	<script src="js/scrollMonitor.js"></script>
+	<script src="js/main.js"></script>
+	<script>
+	(function() {
+		// Fake loading.
+		setTimeout(init, 1000);
+
+		function init() {
+			document.body.classList.remove('loading');
+
+			//************************ Example 1 - reveal on load ********************************
+			
+			var rev1 = new RevealFx(document.querySelector('#rev-1'), {
+				revealSettings : {
+					bgcolor: '#ffffff',
+					onCover: function(contentEl, revealerEl) {
+						contentEl.style.opacity = 1;
+					}
+				}
+			});
+			rev1.reveal();
+
+			var rev2 = new RevealFx(document.querySelector('#rev-2'), {
+				revealSettings : {
+					bgcolor: '#fcf652',
+					delay: 250,
+					onCover: function(contentEl, revealerEl) {
+						contentEl.style.opacity = 1;
+					}
+				}
+			});
+			rev2.reveal();
+		}
+	})();
+	</script>
+</body>
+</html>
