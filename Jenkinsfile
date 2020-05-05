@@ -1,5 +1,7 @@
 pipeline {
-    agent homelab
+    agent {
+    	label 'homelab'
+    }
     environment {
         CREDENTIALS_ID = credentials('homelab-gcp-jenkins-service-account')	
         BUCKET = 'ensemblecanada-com'
