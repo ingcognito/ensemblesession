@@ -4,10 +4,9 @@ pipeline {
     }
     environment {
         BUCKET = 'ensemblecanada-com'
-        PATTERN = './*'
     }
     stages {
-        stage('Store to GCS') {
+        stage('Activate Service Account') {
 	    when {
         	expression { BRANCH_NAME ==~ /master/ }
       	    }
@@ -18,5 +17,13 @@ pipeline {
     	    	sh("gcloud auth activate-service-account --key-file=${GC_KEY}")}
         	}
     	    }
-	}
+        stage('Store to GCS') {
+	    when {
+        	expression { BRANCH_NAME ==~ /master/ }
+      	    }
+            steps{
+	    	sh "gsutil -r cp ./ gs://${env.BUCKET}"
+        	}
+    	    }
+    }
 }
