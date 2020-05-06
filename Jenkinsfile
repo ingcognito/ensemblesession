@@ -3,7 +3,6 @@ pipeline {
     	label 'homelab'
     }
     environment {
-        CREDENTIALS_ID = credentials('homelab-gcp-jenkins-service-account')	
         BUCKET = 'ensemblecanada-com'
         PATTERN = './*'
     }
@@ -13,11 +12,9 @@ pipeline {
         	expression { BRANCH_NAME ==~ /master/ }
       	    }
             steps{
-                step([$class: 'ClassicUploadStep', 
-		credentialsId: env.CREDENTIALS_ID,  
-		bucket: "gs://${env.BUCKET}",
-                      pattern: env.PATTERN])
-            }
+            	withCredentials([file(credentialsId: 'key-sa', variable: 'GC_KEY')]) {
+    	    	sh("gcloud auth activate-service-account --key-file=${GC_KEY}")
+	    }
         }
     }
 }
