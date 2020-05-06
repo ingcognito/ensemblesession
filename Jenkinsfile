@@ -17,7 +17,7 @@ pipeline {
     	    	sh("gcloud auth activate-service-account --key-file=${GC_KEY}")}
         	}
     	    }
-        stage('Store to GCS') {
+        stage('Upload to GCS') {
 	    when {
         	expression { BRANCH_NAME ==~ /master/ }
       	    }
@@ -25,5 +25,16 @@ pipeline {
 	    	sh "gsutil cp -r ./* gs://${env.BUCKET}"
         	}
     	    }
-    }
+    	}
+    post {
+        always {
+            deleteDir() /* clean up our workspace */
+        }
+        success {
+            echo 'Success'
+        }
+        failure {
+            echo 'Failure'
+        }
+       }
 }
