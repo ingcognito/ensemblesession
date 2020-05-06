@@ -22,7 +22,7 @@ pipeline {
         	expression { BRANCH_NAME ==~ /master/ }
       	    }
             steps{
-	    	sh "gsutil -r cp ./ gs://${env.BUCKET}"
+	    	sh "gsutil cp -r ./* gs://${env.BUCKET}"
         	}
     	    }
     }
