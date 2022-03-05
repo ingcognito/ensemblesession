@@ -1,0 +1,6 @@
+x=1
+for file in $(ls)
+do
+  x=$((x+1))
+  mv "$file" "piece_$x.png"
+done
